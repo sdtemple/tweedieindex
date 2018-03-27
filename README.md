@@ -9,8 +9,7 @@ Actuaries use Tweedie models to predict loss costs, claim frequency, and claim s
 
 # Where to find this research
 
-Seth's paper is available on UO's Scholars Bank. https://scholarsbank.uoregon.edu/xmlui/
-Seth presented defended this research on May 14, 2018. He presented his work at the UO Undergraduate Research Symposium on May 17, 2018.
+Seth's paper is available on UO's Scholars Bank (https://scholarsbank.uoregon.edu/xmlui/). Seth presented defended this research on May 14, 2018. He presented his work at the UO Undergraduate Research Symposium on May 17, 2018.
 
 # Imports
 
