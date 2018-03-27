@@ -1,0 +1,380 @@
+---
+title: "Modeling AutoBi with tweedie Package"
+author: Seth Temple
+output: html_notebook
+---
+
+```{r}
+library(tweedie)
+library(statmod)
+library(ggplot2)
+library(insuranceData)
+```
+
+```{r}
+data(AutoBi)
+```
+
+
+Wrangle the AGE column.
+```{r}
+AgeFactor <- with(AutoBi, {
+  (CLMAGE == "0" | CLMAGE == "1" | CLMAGE == "2" | CLMAGE == "3" | CLMAGE == "4" | CLMAGE == "5" | CLMAGE == "6" | CLMAGE == "7" | CLMAGE == "8" | CLMAGE == "9")*1 + (CLMAGE == "10" | CLMAGE == "11" | CLMAGE == "12" | CLMAGE == "13" | CLMAGE == "14" | CLMAGE == "15" | CLMAGE == "16" | CLMAGE == "17" | CLMAGE == "18" | CLMAGE == "19")*2 + (CLMAGE == "20" | CLMAGE == "21" | CLMAGE == "22" | CLMAGE == "23" | CLMAGE == "24" | CLMAGE == "25" | CLMAGE == "26" | CLMAGE == "27" | CLMAGE == "28" | CLMAGE == "29" | CLMAGE == "30" | CLMAGE == "31" | CLMAGE == "32" | CLMAGE == "33" | CLMAGE == "34" | CLMAGE == "35" | CLMAGE == "36" | CLMAGE == "37" | CLMAGE == "38" | CLMAGE == "39")*3 + (CLMAGE == "40" | CLMAGE == "41" | CLMAGE == "42" | CLMAGE == "43" | CLMAGE == "44" | CLMAGE == "45" | CLMAGE == "46" | CLMAGE == "47" | CLMAGE == "48" | CLMAGE == "49" | CLMAGE == "50" | CLMAGE == "51" | CLMAGE == "52" | CLMAGE == "53" | CLMAGE == "54" | CLMAGE == "55" | CLMAGE == "56" | CLMAGE == "57" | CLMAGE == "58" | CLMAGE == "59")*4 + (CLMAGE == "60" | CLMAGE == "61" | CLMAGE == "62" | CLMAGE == "63" | CLMAGE == "64" | CLMAGE == "65" | CLMAGE == "66" | CLMAGE == "67" | CLMAGE == "68" | CLMAGE == "69" |CLMAGE == "70" | CLMAGE == "71" | CLMAGE == "72" | CLMAGE == "73" | CLMAGE == "74" | CLMAGE == "75" | CLMAGE == "76" | CLMAGE == "77" | CLMAGE == "78" | CLMAGE == "79" | CLMAGE == "80" | CLMAGE == "81" | CLMAGE == "82" | CLMAGE == "83" | CLMAGE == "84" | CLMAGE == "85" | CLMAGE == "86" | CLMAGE == "87" | CLMAGE == "88" | CLMAGE == "89" | CLMAGE == "90" | CLMAGE == "91" | CLMAGE == "92" | CLMAGE == "93" | CLMAGE == "94" | CLMAGE == "95" | CLMAGE == "96" | CLMAGE == "97" | CLMAGE == "98" | CLMAGE == "99")*5
+}
+)
+
+AutoBi$AGE <- AgeFactor
+rm(AgeFactor)
+```
+
+Record empties as 0.
+```{r}
+AutoBi$CASENUM <- ifelse(is.na(AutoBi$CASENUM), 0, AutoBi$CASENUM)
+AutoBi$MARITAL <- ifelse(is.na(AutoBi$MARITAL), 0, AutoBi$MARITAL)
+AutoBi$AGE <- ifelse(is.na(AutoBi$AGE), 0, AutoBi$AGE)
+AutoBi$ATTORNEY <- ifelse(is.na(AutoBi$ATTORNEY), 0, AutoBi$ATTORNEY)
+AutoBi$CLMSEX <- ifelse(is.na(AutoBi$CLMSEX), 0, AutoBi$CLMSEX)
+AutoBi$CLMAGE <- ifelse(is.na(AutoBi$CLMAGE), 0, AutoBi$CLMAGE)
+AutoBi$CLMINSUR <- ifelse(is.na(AutoBi$CLMINSUR), 0, AutoBi$CLMINSUR)
+AutoBi$SEATBELT <- ifelse(is.na(AutoBi$SEATBELT), 0, AutoBi$SEATBELT)
+```
+
+Build a model.
+
+Model with no features.
+```{r}
+m0 <- glm(LOSS~1, data=AutoBi, family=tweedie(link.power=0, var.power=2))
+summary(m0)
+```
+
+Model with one feature.
+```{r}
+m1 <- glm(LOSS~1+as.factor(ATTORNEY), 
+          data=AutoBi, 
+          family=tweedie(link.power=0, var.power=2))
+summary(m1)
+anova(m1,m0)
+
+print("AIC change")
+print(AICtweedie(m1) - AICtweedie(m0))
+```
+We like ATTORNEY as a feature. It decreases the deviance, and it is significant for a reasonable confidence level.
+
+Add another feature to the model.
+```{r}
+m2 <- glm(LOSS~1+as.factor(ATTORNEY)+as.factor(AGE), 
+          data=AutoBi, 
+          family=tweedie(link.power=0, var.power=2))
+summary(m2)
+anova(m2,m1)
+
+print("AIC change")
+print(AICtweedie(m2) - AICtweedie(m1))
+```
+We like AGE as a feature. It decreases the deviance, and it is significant for a reasonable confidence level.
+
+Add another feature.
+```{r}
+m3 <- glm(LOSS~1+as.factor(ATTORNEY)+as.factor(AGE)+as.factor(SEATBELT), 
+          data=AutoBi, 
+          family=tweedie(link.power=0, var.power=2))
+summary(m3)
+anova(m3,m2)
+
+print("AIC change")
+print(AICtweedie(m3) - AICtweedie(m2))
+```
+We'll keep SEATBELT in as a feature as well. It decreases the deviance a little. ATTORNEY is the explanatory variable that is the most significant. Observe that the change in AIC has been getting smaller.
+
+Try to add one last feature.
+```{r}
+m4 <- glm(LOSS~1+as.factor(ATTORNEY)+as.factor(AGE)+as.factor(SEATBELT)
+          +as.factor(CLMINSUR), 
+          data=AutoBi, 
+          family=tweedie(link.power=0, var.power=2))
+summary(m4)
+anova(m4,m3)
+
+print("AIC change")
+print(AICtweedie(m4) - AICtweedie(m3))
+```
+We'll keep CLMINSUR in as a feature in the model. It decreases deviance and our penalized measure of fit by a little. Exercise care though, because we don't get significance for this explanatory variable. We don't want to say anything too scientific or matter-of-fact about how a claimant having insurance affects the loss cost.
+
+Record that the dispersion parameter for this Tweedie model is 6.924109. We will see how the dispersion parameter changes when we find p in a more intelligent manner. For our current model, we arbitrarily chose p to be 2. This choice corresponds to the losses being distributed as gamma random variables.
+
+Dunn and Smyth developed the tweedie.profile function. This algorithm does MLE estimation to find the power/index parameter p. Moreover, p influences the dispersion parameter. The algorithm estimates the dispersion parameter as well.
+
+Use tweedie.profile function to estimate p and phi (the dispersion parameter.
+```{r}
+start <- Sys.time()
+
+# identity link
+output <- tweedie.profile(LOSS~1, data=AutoBi, link.power=1,
+                          method="interpolation", verbose=2,
+                          do.plot=TRUE, do.smooth=FALSE,
+                          p.vec=seq(2,3,.1))
+
+end <- Sys.time()
+print(end-start)
+```
+The code executed in 6 seconds. MLE gives p=2.5 and phi=1.473818. Given parameters, the interpolation method decides how to find the density. See papers by Dunn and Smyth on series evaluation and Fourier inversion.
+
+Notably, phi (the dispersion parameter) got smaller with our MLE estimate for p.
+
+Compare interpolation with series method.
+```{r}
+start <- Sys.time()
+
+# identity link
+series_output <- tweedie.profile(LOSS~1, data=AutoBi, link.power=1,
+                          method="series", verbose=2,
+                          do.plot=TRUE, do.smooth=FALSE,
+                          p.vec=seq(2,3,.1))
+
+end <- Sys.time()
+print(end-start)
+```
+Time to execute code is roughly the same. But series evaluation fails for the p closer to 3. MLE estimates remain the same.
+
+```{r}
+start <- Sys.time()
+
+# identity link
+inversion_output <- tweedie.profile(LOSS~1, data=AutoBi, link.power=1,
+                          method="inversion", verbose=2,
+                          do.plot=TRUE, do.smooth=FALSE,
+                          p.vec=seq(2,3,.1))
+
+end <- Sys.time()
+print(end-start)
+```
+Inversion method takes longer to exectute. We get log likelihoods for all tested power/index parameter values.
+
+
+Let's change some other parameters in the tweedie.profile function.
+
+Test more power parameter values.
+```{r}
+start <- Sys.time()
+
+# identity link
+output <- tweedie.profile(LOSS~1, data=AutoBi, link.power=1,
+                                    method="interpolation",
+                                    do.plot=TRUE, do.smooth=FALSE,
+                                    p.vec=seq(2,3,.02))
+
+end <- Sys.time()
+print(end-start)
+
+print(output$p.max)
+print(output$phi.max)
+```
+MLE estimates for p and phi did not change. We didn't need to use so many possible
+power parameter values. We only wrote code that ran slower.
+
+Change the window that we test power parameter values in.
+```{r}
+start <- Sys.time()
+
+# identity link
+output <- tweedie.profile(LOSS~1, data=AutoBi, link.power=1,
+                                    method="interpolation",
+                                    do.plot=TRUE, do.smooth=FALSE,
+                                    p.vec=seq(2,4,.1))
+
+end <- Sys.time()
+print(end-start)
+
+print(output$p.max)
+print(output$phi.max)
+```
+MLE gives the same p and phi. 
+
+We don't extend the left bound further because the vector must have exact zeros for us to consider the data Poisson-gamma distributed. The code runs into issues if we do this.
+
+```{r}
+start <- Sys.time()
+
+# identity link
+output <- tweedie.profile(LOSS~1, data=AutoBi, link.power=1,
+                                    method="interpolation",
+                                    do.plot=TRUE, do.smooth=FALSE,
+                                    p.vec=seq(2,5,.2))
+
+end <- Sys.time()
+print(end-start)
+
+print(output$p.max)
+print(output$phi.max)
+```
+Here we see a change. Did extending the right bound or lengthening the interval spacing cause this change?
+
+```{r}
+start <- Sys.time()
+
+# identity link
+output <- tweedie.profile(LOSS~1, data=AutoBi, link.power=1,
+                                    method="interpolation",
+                                    do.plot=TRUE, do.smooth=FALSE,
+                                    p.vec=seq(2,6,.1))
+
+end <- Sys.time()
+print(end-start)
+
+print(output$p.max)
+print(output$phi.max)
+```
+It looks like the change was caused by adjusting the interval spacing.
+
+```{r}
+start <- Sys.time()
+
+# identity link
+output <- tweedie.profile(LOSS~1, data=AutoBi, link.power=1,
+                                    method="interpolation",
+                                    do.plot=TRUE, do.smooth=FALSE,
+                                    p.vec=seq(2,3,.05))
+
+end <- Sys.time()
+print(end-start)
+
+print(output$p.max)
+print(output$phi.max)
+```
+The interval spacing can affect MLE if we pick intervals too wide.
+
+From this short analysis, we suspect AutoBi's claim costs data is distributed like a Tweedie model with power 2.5. 
+
+Assess if the our model improves with this new choice of p.
+
+Write some functions that give feedback.
+```{r}
+give_feedback <- function(model){
+  SSR <- sum((model$residuals)**2)
+  fitted_values <- model$fitted.values
+  print("Squared Sum of Residuals"); print(SSR)
+  print("Deviance"); print(model$deviance)
+  print("AIC"); print(AICtweedie(model))
+}
+
+compare_insurance_models <- function(model1, model2){
+  
+  SSR1 <- sum((model1$residuals)**2)
+  SSR2 <- sum((model2$residuals)**2)
+  diff_SSR <- SSR1 - SSR2
+  
+  fitted_values1 <- model1$fitted.values
+  fitted_values2 <- model2$fitted.values
+  diff_fitted_values <- fitted_values1 - fitted_values2
+  diff_losses <- sum(abs(diff_fitted_values))
+  diff_econ = sum(model1$fitted.values - model2$fitted.values)
+  
+  diff_deviance <- model1$deviance - model2$deviance
+  diff_AIC <- AICtweedie(model1) - AICtweedie(model2)
+  
+  print("Model differences are relative to the first model")
+  print("Squared Sum of Residuals"); print(diff_SSR)
+  print("Deviance"); print(diff_deviance)
+  print("AIC"); print(diff_AIC)
+  
+  print("Sum of absolute differences between losses"); print(diff_losses)
+  print("Total difference between losses"); print(diff_econ)
+  
+  print("First 10 differences in fitted losses")
+  print(diff_fitted_values[1:5])
+  
+}
+```
+
+Intepret the results.
+```{r}
+arbitrary_p_model <- glm(LOSS~1+as.factor(SEATBELT)+as.factor(ATTORNEY)
+                         +as.factor(AGE)+as.factor(CLMINSUR), data=AutoBi,
+                         family=tweedie(link.power=0, var.power=2))
+give_feedback(arbitrary_p_model)
+```
+
+```{r}
+intelligent_p_model <- glm(LOSS~1+as.factor(SEATBELT)+as.factor(ATTORNEY)
+                         +as.factor(AGE)+as.factor(CLMINSUR), data=AutoBi,
+                         family=tweedie(link.power=0, var.power=output$p.max))
+give_feedback(intelligent_p_model)
+```
+
+```{r}
+compare_insurance_models(intelligent_p_model, arbitrary_p_model)
+```
+
+Interestingly, the Tweedie model with 2.5 as its power has a larger squared sum of residuals, but smaller deviance and AIC. Numerically, it has larger residual errors relative to the specific dataset. On the other hand, it is the more likely model from what we know about statistics and probability theory.
+
+The Tweedie model with power 2.5 predicts $257,000 less in losses. The sum of the loss differences between the two models is 426,000 dollars. Individual differences could change losses by the cents or by the dollars. Supposing the Tweedie model with power 2.5 is more accurate, we could improve our loss predictions by 426,000 dollars. AutoBi has 1340 observations. I wonder how much we could improve loss predictions by for larger datasets. 
+
+Remark. Our improved Tweedie model predicts $257,000 less in losses. For the insurance company, this result means they could (and probably should) decrease premiums. Actuaries, and other insurance professionals, are not evil, greedy people. We try our best to predict risk. If this added sophistication to the model says the policyholder's are less risky, then we can save our policyholder's some money. Furthermore, we could advertise to more people with lower rates. In the end, we cannot rashly come to any conclusion about how this new modeling technology would affect our business.
+
+How much change could this added sophistication provide?
+```{r}
+sum(intelligent_p_model$fitted.values)/sum(AutoBi$LOSS)
+sum(arbitrary_p_model$fitted.values)/sum(AutoBi$LOSS)
+```
+This change is at least noticeable. We would need to assess if the change provides any value to an insurance business though. To estimate the tweedie power parameter in this way, the actuary would need to use R. Changing software could be costly for an insurance company.
+
+Conclude with some visualization.
+```{r}
+IntelligentModelResults <- data.frame(FittedValues=exp(predict(intelligent_p_model)),
+                                      Values=AutoBi$LOSS,
+                                      Residuals=intelligent_p_model$residuals,
+                                      PreExpFittedValues=predict(intelligent_p_model),
+                                      PreExpValues=log(AutoBi$LOSS),
+                                      Age=as.factor(AutoBi$AGE),
+                                      Attorney=as.factor(AutoBi$ATTORNEY),
+                                      Seatbelt=as.factor(AutoBi$SEATBELT),
+                                      Insured=as.factor(AutoBi$CLMINSUR),
+                                      Case=as.factor(AutoBi$CASENUM))
+```
+
+```{r}
+ArbitraryModelResults <- data.frame(FittedValues=exp(predict(arbitrary_p_model)),
+                                      Values=AutoBi$LOSS,
+                                      Residuals=arbitrary_p_model$residuals,
+                                      PreExpFittedValues=predict(arbitrary_p_model),
+                                      PreExpValues=log(AutoBi$LOSS),
+                                      Age=as.factor(AutoBi$AGE),
+                                      Attorney=as.factor(AutoBi$ATTORNEY),
+                                      Seatbelt=as.factor(AutoBi$SEATBELT),
+                                      Insured=as.factor(AutoBi$CLMINSUR),
+                                      Case=as.factor(AutoBi$CASENUM))
+```
+
+```{r}
+p1 <- ggplot(data=IntelligentModelResults, aes(x=FittedValues))
+p1 + geom_density(size=.5, colour="black", fill="blue") + 
+  ggtitle("Cumulative Distribution of Fitted Tweedie 2.5 Model") +
+  ylab("Probability Density") +
+  xlab("Fitted Losses from Auto Claims") +
+  theme(axis.title.x=element_text(size=10, family="sans"),
+        axis.title.y=element_text(size=10, family="sans"),
+        plot.title=element_text(size=14, family="sans"))
+
+p2 <- ggplot(data=ArbitraryModelResults, aes(x=FittedValues))
+p2 + geom_density(size=.5, colour="black", fill="green") + 
+  ggtitle("Cumulative Distribution of Fitted Tweedie 2 Model") +
+  ylab("Probability Density") +
+  xlab("Fitted Losses from Auto Claims") +
+  theme(axis.title.x=element_text(size=10, family="sans"),
+        axis.title.y=element_text(size=10, family="sans"),
+        plot.title=element_text(size=14, family="sans"))
+
+p3 <- ggplot(data=IntelligentModelResults, aes(x=Values))
+p3 + geom_density(size=.5, colour="black", fill="red") +
+  coord_cartesian(xlim=c(0,25)) +
+  ggtitle("Cumulative Distribution of Claims Data") +
+  ylab("Probability Density") +
+  xlab("Losses from Auto Claims") +
+  theme(axis.title.x=element_text(size=10, family="sans"),
+        axis.title.y=element_text(size=10, family="sans"),
+        plot.title=element_text(size=14, family="sans"))
+```
+
+It is hard to draw any conclusions from the graphs. Both Tweedie models appear to do a decent job modeling the actual claims data. Also, they look very similar. This similarity matches with our earlier observation that losses only change marginally (by the cents or by a couple of dollars) for a given observation.
+
+The upshot of this study: we can more accurately model claim costs by being more sophisticated in how we select the power parameter. This notebook looks into claims severity. Actuaries traditionally model claims severity with an inverse-Gaussian distribution or a gamma distribution.
