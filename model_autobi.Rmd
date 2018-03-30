@@ -1,0 +1,261 @@
+---
+title: "Modeling AutoBi with tweedie Package"
+author: Seth Temple
+output: html_notebook
+---
+
+```{r}
+library(tweedie)
+library(statmod)
+library(ggplot2)
+library(insuranceData)
+```
+
+```{r}
+data(AutoBi)
+```
+
+Wrangle the AGE column.
+```{r}
+AgeFactor <- with(AutoBi, {
+  (CLMAGE == "0" | CLMAGE == "1" | CLMAGE == "2" | CLMAGE == "3" | CLMAGE == "4" | CLMAGE == "5" | CLMAGE == "6" | CLMAGE == "7" | CLMAGE == "8" | CLMAGE == "9")*1 + (CLMAGE == "10" | CLMAGE == "11" | CLMAGE == "12" | CLMAGE == "13" | CLMAGE == "14" | CLMAGE == "15" | CLMAGE == "16" | CLMAGE == "17" | CLMAGE == "18" | CLMAGE == "19")*2 + (CLMAGE == "20" | CLMAGE == "21" | CLMAGE == "22" | CLMAGE == "23" | CLMAGE == "24" | CLMAGE == "25" | CLMAGE == "26" | CLMAGE == "27" | CLMAGE == "28" | CLMAGE == "29" | CLMAGE == "30" | CLMAGE == "31" | CLMAGE == "32" | CLMAGE == "33" | CLMAGE == "34" | CLMAGE == "35" | CLMAGE == "36" | CLMAGE == "37" | CLMAGE == "38" | CLMAGE == "39")*3 + (CLMAGE == "40" | CLMAGE == "41" | CLMAGE == "42" | CLMAGE == "43" | CLMAGE == "44" | CLMAGE == "45" | CLMAGE == "46" | CLMAGE == "47" | CLMAGE == "48" | CLMAGE == "49" | CLMAGE == "50" | CLMAGE == "51" | CLMAGE == "52" | CLMAGE == "53" | CLMAGE == "54" | CLMAGE == "55" | CLMAGE == "56" | CLMAGE == "57" | CLMAGE == "58" | CLMAGE == "59")*4 + (CLMAGE == "60" | CLMAGE == "61" | CLMAGE == "62" | CLMAGE == "63" | CLMAGE == "64" | CLMAGE == "65" | CLMAGE == "66" | CLMAGE == "67" | CLMAGE == "68" | CLMAGE == "69" |CLMAGE == "70" | CLMAGE == "71" | CLMAGE == "72" | CLMAGE == "73" | CLMAGE == "74" | CLMAGE == "75" | CLMAGE == "76" | CLMAGE == "77" | CLMAGE == "78" | CLMAGE == "79" | CLMAGE == "80" | CLMAGE == "81" | CLMAGE == "82" | CLMAGE == "83" | CLMAGE == "84" | CLMAGE == "85" | CLMAGE == "86" | CLMAGE == "87" | CLMAGE == "88" | CLMAGE == "89" | CLMAGE == "90" | CLMAGE == "91" | CLMAGE == "92" | CLMAGE == "93" | CLMAGE == "94" | CLMAGE == "95" | CLMAGE == "96" | CLMAGE == "97" | CLMAGE == "98" | CLMAGE == "99")*5
+}
+)
+
+AutoBi$AGE <- AgeFactor
+rm(AgeFactor)
+```
+
+Record empties as 0.
+```{r}
+AutoBi$CASENUM <- ifelse(is.na(AutoBi$CASENUM), 0, AutoBi$CASENUM)
+AutoBi$MARITAL <- ifelse(is.na(AutoBi$MARITAL), 0, AutoBi$MARITAL)
+AutoBi$AGE <- ifelse(is.na(AutoBi$AGE), 0, AutoBi$AGE)
+AutoBi$ATTORNEY <- ifelse(is.na(AutoBi$ATTORNEY), 0, AutoBi$ATTORNEY)
+AutoBi$CLMSEX <- ifelse(is.na(AutoBi$CLMSEX), 0, AutoBi$CLMSEX)
+AutoBi$CLMAGE <- ifelse(is.na(AutoBi$CLMAGE), 0, AutoBi$CLMAGE)
+AutoBi$CLMINSUR <- ifelse(is.na(AutoBi$CLMINSUR), 0, AutoBi$CLMINSUR)
+AutoBi$SEATBELT <- ifelse(is.na(AutoBi$SEATBELT), 0, AutoBi$SEATBELT)
+```
+
+Use some p to build a model.
+```{r}
+tweedie.profile(LOSS~1, data=AutoBi,
+                do.smooth=TRUE, do.plot=TRUE, verbose=2,
+                method="interpolation",
+                p.vec=seq(1.8,3.5,.1),
+                link.power=1)
+```
+
+```{r}
+disp <- 1.473818
+```
+
+```{r}
+m0 <- glm(LOSS~1, data=AutoBi,
+          family=tweedie(var.power=2.5, link.power=0))
+AICtweedie(m0, k=2, dispersion=disp)
+```
+
+Add features to the model that decrease AIC.
+```{r}
+m1 <- glm(LOSS~1+as.factor(ATTORNEY), data=AutoBi,
+          family=tweedie(var.power=2.5, link.power=0))
+summary(m1)
+AICtweedie(m1, k=2, dispersion=disp)
+```
+Yes.
+
+```{r}
+m2 <- glm(LOSS~1+as.factor(ATTORNEY)+as.factor(AGE), data=AutoBi,
+          family=tweedie(var.power=2.5, link.power=0))
+summary(m2)
+AICtweedie(m2, k=2, dispersion=disp)
+```
+Yes.
+
+```{r}
+m3 <- glm(LOSS~1+as.factor(ATTORNEY)+as.factor(AGE)+as.factor(SEATBELT), data=AutoBi,
+          family=tweedie(var.power=2.5, link.power=0))
+summary(m3)
+AICtweedie(m3, k=2, dispersion=disp)
+```
+Yes.
+
+```{r}
+m4 <- glm(LOSS~1+as.factor(ATTORNEY)+as.factor(AGE)+as.factor(SEATBELT)
+          +as.factor(CLMINSUR), 
+          data=AutoBi,
+          family=tweedie(var.power=2.5, link.power=0))
+summary(m4)
+AICtweedie(m4, k=2, dispersion=disp)
+```
+No.
+Last two features CLMSEX and MARITAL cause an error in the glm.fit algorithm.
+
+```{r}
+out <- tweedie.profile(LOSS~1+as.factor(ATTORNEY)+as.factor(SEATBELT)+as.factor(AGE),
+                       data=AutoBi,
+                       do.plot=TRUE, do.smooth=TRUE, verbose=2, link.power=0,
+                       method="interpolation",
+                       p.vec=seq(1.8,2.7,.1))
+```
+
+```{r}
+pmax <- out$p.max
+phimax <- out$phi.max
+phigamma <- 1.365224
+phi2.5 <- 1.13846 
+```
+
+```{r}
+gamma_model <- glm(LOSS~1+as.factor(ATTORNEY)+as.factor(SEATBELT)+as.factor(AGE),
+                   data=AutoBi,
+                   family=tweedie(var.power=2, link.power=0))
+summary(gamma_model)
+AICtweedie(gamma_model, k=2, dispersion=phigamma)
+```
+```{r}
+mid_model <- glm(LOSS~1+as.factor(ATTORNEY)+as.factor(SEATBELT)+as.factor(AGE),
+                   data=AutoBi,
+                   family=tweedie(var.power=2.5, link.power=0))
+summary(mid_model)
+AICtweedie(mid_model, k=2, dispersion=phi2.5)
+```
+```{r}
+max_model <- glm(LOSS~1+as.factor(ATTORNEY)+as.factor(SEATBELT)+as.factor(AGE),
+                   data=AutoBi,
+                   family=tweedie(var.power=pmax, link.power=0))
+summary(max_model)
+AICtweedie(max_model, k=2, dispersion=phimax)
+```
+We achieved the lowest AIC with the MLE estimate for p and phi. Notice that the coefficients haven't changed much between the models. Let's assess how this changes the fitted loss costs.
+
+There appears to be a trend here. As the model gets closer to inverse-Gaussian, the fitted values get smaller. Compared to the gamma, the inverse-Gaussian has a sharper peak and a wider tail. This behavior may explain this trend.
+```{r}
+sum(max_model$fitted.values)/sum(AutoBi$LOSS)
+sum(mid_model$fitted.values)/sum(AutoBi$LOSS)
+sum(gamma_model$fitted.values)/sum(AutoBi$LOSS)
+```
+
+Our model with the MLE estimate for p predicts $177K less in losses than the gamma model.
+```{r}
+percent <- sum(gamma_model$fitted.values)/sum(AutoBi$LOSS) - sum(max_model$fitted.values)/sum(AutoBi$LOSS)
+
+sum(AutoBi$LOSS)*percent*1000
+```
+
+The total losses for the insurer are about 8 million. 1340 observations is a reasonably-sized severity dataset.
+```{r}
+sum(AutoBi$LOSS)*1000
+```
+
+Now, let's look at our results with training and testing sets.
+
+```{r}
+smp_size <- floor(0.75 * nrow(AutoBi))
+
+
+set.seed(100395)
+train_ind <- sample(seq_len(nrow(AutoBi)), size = smp_size)
+
+train_autobi <- AutoBi[train_ind, ]
+test_autobi <- AutoBi[-train_ind, ]
+```
+
+```{r}
+Out <- tweedie.profile(LOSS~1+as.factor(ATTORNEY)+as.factor(SEATBELT)+as.factor(AGE),
+                       data=train_autobi,
+                       do.plot=TRUE, do.smooth=TRUE, verbose=2, link.power=0,
+                       method="interpolation",
+                       p.vec=seq(1.8,2.7,.1))
+```
+
+```{r}
+PMAX <- Out$p.max
+PHIMAX <- Out$phi.max
+PhiGa <- 1.28493
+```
+
+```{r}
+GAMMA_MODEL <- glm(LOSS~1+as.factor(ATTORNEY)+as.factor(SEATBELT)+as.factor(AGE),
+                   data=train_autobi,
+                   family=tweedie(var.power=2,link.power=0))
+summary(GAMMA_MODEL)
+```
+
+```{r}
+MAX_MODEL <- glm(LOSS~1+as.factor(ATTORNEY)+as.factor(SEATBELT)+as.factor(AGE),
+                   data=train_autobi,
+                   family=tweedie(var.power=PMAX,link.power=0))
+summary(MAX_MODEL)
+```
+
+```{r}
+predict(MAX_MODEL, test_autobi)[1:20]
+```
+
+```{r}
+predict(GAMMA_MODEL, test_autobi)[1:20]
+```
+
+```{r}
+test_autobi$LOSS[1:20]
+```
+
+```{r}
+sum(abs(exp(predict(MAX_MODEL, test_autobi))-test_autobi$LOSS))
+```
+
+```{r}
+sum(abs(exp(predict(GAMMA_MODEL, test_autobi))-test_autobi$LOSS))
+```
+
+```{r}
+sum(exp(predict(MAX_MODEL, test_autobi)))/sum(test_autobi$LOSS)
+sum(exp(predict(GAMMA_MODEL, test_autobi)))/sum(test_autobi$LOSS)
+```
+
+So MAX_MODEL predicted $200 closer to the actual losses. That kind of result is not worth the effort I put in.
+
+Also, both these models suck. They predict only 57% of the cost of the losses. I suspect we need more features in our model.
+
+Conclude with some visualization.
+```{r}
+visuals.frame <- data.frame(gammas=exp(predict(GAMMA_MODEL, test_autobi)),
+                            maxs=exp(predict(MAX_MODEL, test_autobi)),
+                            losses=test_autobi$LOSS)
+```
+
+
+```{r}
+p1 <- ggplot(data=visuals.frame, aes(x=maxs))
+p1 + geom_density(size=.5, colour="black", fill="blue") + 
+  ggtitle("Cumulative Distribution of Fitted Tweedie Model (p=2.314)") +
+  ylab("Probability Density") +
+  xlab("Fitted Losses from Auto Claims") +
+  theme(axis.title.x=element_text(size=10, family="sans"),
+        axis.title.y=element_text(size=10, family="sans"),
+        plot.title=element_text(size=14, family="sans"))
+
+p2 <- ggplot(data=visuals.frame, aes(x=gammas))
+p2 + geom_density(size=.5, colour="black", fill="green") + 
+  ggtitle("Cumulative Distribution of Fitted Tweedie Model (p=2)") +
+  ylab("Probability Density") +
+  xlab("Fitted Losses from Auto Claims") +
+  theme(axis.title.x=element_text(size=10, family="sans"),
+        axis.title.y=element_text(size=10, family="sans"),
+        plot.title=element_text(size=14, family="sans"))
+
+p3 <- ggplot(data=visuals.frame, aes(x=losses))
+p3 + geom_density(size=.5, colour="black", fill="red") +
+  coord_cartesian(xlim=c(0,25)) +
+  ggtitle("Cumulative Distribution of Claims Data") +
+  ylab("Probability Density") +
+  xlab("Losses from Auto Claims") +
+  theme(axis.title.x=element_text(size=10, family="sans"),
+        axis.title.y=element_text(size=10, family="sans"),
+        plot.title=element_text(size=14, family="sans"))
+```
+
+The End. Estimating the Tweedie power didn't help much. We need more explanatory variables. Check out the LM Home Fire dataset.

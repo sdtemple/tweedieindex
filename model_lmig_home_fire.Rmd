@@ -1,0 +1,154 @@
+---
+title: "Train and Test: Modeling LMIG Home Fire Perils with tweedie package"
+author: Seth Temple
+output: html_notebook
+---
+
+```{r}
+library(statmod)
+library(tweedie)
+library(ggplot2)
+```
+
+```{r}
+lmgHomeFire.LossCost <- read.csv("~/TweedieThesis/lmFirePerilTrain/train.csv",
+                                 header=TRUE, sep=",")
+```
+```{r}
+HomeFire <- subset(lmgHomeFire.LossCost,
+                                  !(is.na(lmgHomeFire.LossCost$geodemVar5)))
+```
+```{r}
+rm(lmgHomeFire.LossCost)
+```
+
+```{r}
+HomeFire <- subset(HomeFire, select=c("target","var10","var13",
+                                                    "geodemVar24",
+                                                    "geodemVar37","weatherVar10",
+                                                    "weatherVar72","weatherVar102",
+                                                    "weatherVar104",
+                                      "weatherVar7","weatherVar118","weatherVar173",
+                                      "var8","var4"))
+```
+
+
+```{r}
+
+smp_size <- floor(0.75 * nrow(HomeFire))
+
+
+set.seed(030293)
+train_ind <- sample(seq_len(nrow(HomeFire)), size = smp_size)
+
+train_homefire <- HomeFire[train_ind, ]
+test_homefire <- HomeFire[-train_ind, ]
+```
+
+```{r}
+out <- tweedie.profile(target~.-1-var4-var8,
+                       data=train_homefire,
+                       p.vec=c(1.1,1.2,1.3,1.33,1.4,1.5,1.6,1.66,1.7,1.8,1.9),
+                       do.plot=TRUE, do.smooth=TRUE, verbose=2,
+                       method="interpolation", link.power=0,
+                       fit.glm=TRUE)
+```
+
+```{r}
+pmax <- out$p.max
+phimax <- out$phi.max
+phi1.66 <- 200.3441
+phi1.33 <- 19.71236 
+```
+
+
+```{r}
+max_model <- glm(target~.-1-var4-var8, data=train_homefire,
+                 family=tweedie(var.power=pmax,link.power=0))
+summary(max_model)
+```
+
+```{r}
+upper_model <- glm(target~.-1-var4-var8, data=train_homefire,
+                   family=tweedie(var.power=1.66, link.power=0))
+summary(upper_model)
+```
+
+```{r}
+lower_model <- glm(target~.-1-var4-var8, data=train_homefire,
+                   family=tweedie(var.power=1.33, link.power=0))
+summary(lower_model)
+```
+
+AIC says best model is the one where we MLE estimate p.
+```{r}
+AICtweedie(max_model, k=2, phimax)
+AICtweedie(upper_model, k=2, phi1.66)
+AICtweedie(lower_model, k=2, phi1.33)
+```
+
+```{r}
+sum(exp(predict(max_model, test_homefire)))/sum(test_homefire$target)
+sum(exp(predict(upper_model, test_homefire)))/sum(test_homefire$target)
+sum(exp(predict(lower_model, test_homefire)))/sum(test_homefire$target)
+```
+
+We only predicted ~84% of the losses. We probably need to find more explanatory variables.
+
+```{r}
+visuals.frame <- data.frame(lowers=exp(predict(lower_model, test_homefire)),
+                            maxs=exp(predict(max_model, test_homefire)),
+                            uppers=exp(predict(upper_model, test_homefire)),
+                            losses=test_homefire$target)
+```
+```{r}
+p1 <- ggplot(data=visuals.frame, aes(x=maxs))
+p1 + geom_density(size=.5, colour="black", fill="blue") + 
+  ggtitle("Cumulative Distribution of Fitted Tweedie Model (p=1.524)") +
+  ylab("Probability Density") +
+  xlab("Fitted Losses from Fire Damage Claims") +
+  theme(axis.title.x=element_text(size=10, family="sans"),
+        axis.title.y=element_text(size=10, family="sans"),
+        plot.title=element_text(size=14, family="sans"))
+
+p2 <- ggplot(data=visuals.frame, aes(x=uppers))
+p2 + geom_density(size=.5, colour="black", fill="green") + 
+  ggtitle("Cumulative Distribution of Fitted Tweedie Model (p=1.66)") +
+  ylab("Probability Density") +
+  xlab("Fitted Losses from Fire Damage Claims") +
+  theme(axis.title.x=element_text(size=10, family="sans"),
+        axis.title.y=element_text(size=10, family="sans"),
+        plot.title=element_text(size=14, family="sans"))
+
+p3 <- ggplot(data=visuals.frame, aes(x=lowers))
+p3 + geom_density(size=.5, colour="black", fill="purple") + 
+  ggtitle("Cumulative Distribution of Fitted Tweedie Model (p=1.33)") +
+  ylab("Probability Density") +
+  xlab("Fitted Losses from Fire Damage Claims") +
+  theme(axis.title.x=element_text(size=10, family="sans"),
+        axis.title.y=element_text(size=10, family="sans"),
+        plot.title=element_text(size=14, family="sans"))
+
+
+p4 <- ggplot(data=visuals.frame, aes(x=losses))
+p4 + geom_density(size=.5, colour="black", fill="red") +
+  coord_cartesian(xlim=c(0,.15)) +
+  ggtitle("Cumulative Distribution of Claims Data") +
+  ylab("Probability Density") +
+  xlab("Losses from Fire Damage Claims") +
+  theme(axis.title.x=element_text(size=10, family="sans"),
+        axis.title.y=element_text(size=10, family="sans"),
+        plot.title=element_text(size=14, family="sans"))
+
+p5 <- ggplot(data=visuals.frame, aes(x=losses))
+p5 + geom_density(size=.5, colour="black", fill="red") +
+  coord_cartesian(xlim=c(0,1)) +
+  ggtitle("Cumulative Distribution of Claims Data") +
+  ylab("Probability Density") +
+  xlab("Losses from Fire Damage Claims") +
+  theme(axis.title.x=element_text(size=10, family="sans"),
+        axis.title.y=element_text(size=10, family="sans"),
+        plot.title=element_text(size=14, family="sans"))
+
+```
+
