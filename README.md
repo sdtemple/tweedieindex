@@ -9,10 +9,10 @@ Tweedie models are exponential dispersion models that have power unit variance f
 Actuaries use Tweedie models to predict loss costs, claim frequency, and claim severity in the insurance industry. Although the Tweedie power parameter can take on infinitely many values, most insurance models assume a parameter value that corresponds to a Poisson, gamma, or inverse-Gaussian random variable. An algorithm is developed in R to estimate the power parameter. This algorithm is tested on simulations and applied to a large property insurance dataset. Preliminary results suggest that estimating the power parameter provides marginal improvement in predicting the loss costs for household fire perils.
 
 # Most interesting files
-model_autobi.Rmd
-model_lmig_home_fire.Rmd
-rtweedie_speed_test.R
-tweedie_simulations.R
+* model_autobi.Rmd
+* model_lmig_home_fire.Rmd
+* rtweedie_speed_test.R
+* tweedie_simulations.R
 
 # Where to find this research
 
