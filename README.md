@@ -1,7 +1,9 @@
+
 # tweedie_power_parameter_thesis
-This repository stores code Seth Temple used in writing his undergraduate honors thesis. The thesis' title is "The Tweedie Index Parameter and Its Estimators: A Gentle Introduction with Applications to Actuarial Ratemaking". He uses R and the tweedie package to analyze insurance claims data.
+This repository stores code Seth Temple used in writing his undergraduate honors thesis. The thesis' title is "The Tweedie Index Parameter and Its Estimator: An Introduction with Applications to Actuarial Ratemaking". He uses R and the tweedie package to analyze insurance claims data.
 
 # Abstract
+This is a rough draft of my abstract. I suspect some wording may change.
 
 Tweedie models are exponential dispersion models that have power unit variance functions, are infinitely divisible, and are closed under translations and scale transformations. The theory of these probability distributions is presented in a way that is accessible to students and professionals in STEM. Most Tweedie models have no closed form density function, so statistical software relies on numerical approximation methods. Peter Dunn and Gordon Smyth propose three techniques to approximate these densities in the R tweedie package. We discuss the theory and application of these techniques.
 
@@ -13,7 +15,7 @@ Seth's paper is available on UO's Scholars Bank (https://scholarsbank.uoregon.ed
 
 # Imports
 
-Use RStudio as an integrated development environment. You must install statmod, tweedie, insuranceData, and ggplot2 packages to run all the code.
+Use RStudio as an integrated development environment. You must install statmod, tweedie, insuranceData, and ggplot2 packages to run all the code. To access the LMIG Home Fire Perils data, visit https://www.kaggle.com/c/liberty-mutual-fire-peril.
 
 # Acknowledgments
 
