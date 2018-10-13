@@ -1,8 +1,10 @@
 # tweedie_power_parameter_thesis
-This repository stores code Seth Temple used in writing his undergraduate honors thesis. The thesis' title is "The Tweedie Index Parameter and Its Estimator: An Introduction with Applications to Actuarial Ratemaking". He uses R and the tweedie package to analyze insurance claims data.
+This repository stores code I used in writing my undergraduate honors thesis. The thesis' title is "The Tweedie Index Parameter and Its Estimator: An Introduction with Applications to Actuarial Ratemaking". I use R and the tweedie package to analyze insurance claims data.
+
+Note: This repository is not up to date. I made changes to the code base that I did not push. Consider the scripts and markdowns as explorations of a dataset and practice with the tweedie package. The thesis is more a theoretical piece than it is applied.
 
 # Abstract
-This is a rough draft of my abstract. I suspect some wording may change.
+This is a rough draft of my abstract.
 
 Tweedie models are exponential dispersion models that have power unit variance functions, are infinitely divisible, and are closed under translations and scale transformations. The theory of these probability distributions is presented in a way that is accessible to students and professionals in STEM. Most Tweedie models have no closed form density function, so statistical software relies on numerical approximation methods. Peter Dunn and Gordon Smyth propose three techniques to approximate these densities in the R tweedie package. We discuss the theory and application of these techniques.
 
@@ -16,7 +18,7 @@ Actuaries use Tweedie models to predict loss costs, claim frequency, and claim s
 
 # Where to find this research
 
-Seth's paper is available on UO's Scholars Bank (https://scholarsbank.uoregon.edu/xmlui/). Seth defended his thesis on May 14, 2018. He presented his work at the UO Undergraduate Research Symposium on May 17, 2018.
+My paper is available on the UO Math Department's website (https://math.uoregon.edu/wp-content/uploads/2018/07/TempleStempleTweedieThesis.pdf). I suspect this navigation on the UO Math page to be temporary for 2-3 years. At some point, it will be available on UO's Scholars Bank (https://scholarsbank.uoregon.edu/xmlui/). I defended my thesis on May 14, 2018.
 
 # Imports
 
